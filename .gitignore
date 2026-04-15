@@ -1,0 +1,26 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Output directories
+output/
+output_*/
+logs/
+models/Wan-AI/
+
+# Model weights (download via `hf download` — see README)
+weights/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Virtual environments
+.venv/
+venv/
+env/
