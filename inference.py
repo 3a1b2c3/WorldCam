@@ -33,6 +33,8 @@ OUTPUT_QUALITY = 4   # 1 (low) – 10 (high)
 CFG_SCALE          = 4
 SEED               = 0
 GAME_DOMAIN_PREFIX         = "<A first-person shooter CS game> "
+NUM_AR_STEPS                = 50   # number of autoregressive rollout steps
+ATTENTION_SINK_INFERENCE    = False  # use the first conditioning frame as an attention sink
 LONG_TERM_MEMORY_START      = 30   # AR step at which long-term memory retrieval begins
 LONG_TERM_MEMORY_NUM_CLIPS  = 4    # number of memory clips to retrieve per step
 LONG_TERM_MEMORY_REF_INDICES = [48, 52, 56, 60]  # extrinsic indices used as retrieval query
@@ -140,6 +142,8 @@ def main():
             tiled=True,
             long_term_memory_start_step=LONG_TERM_MEMORY_START,
             long_term_memory_num_clips=LONG_TERM_MEMORY_NUM_CLIPS,
+            num_ar_steps=NUM_AR_STEPS,
+            attention_sink_inference=ATTENTION_SINK_INFERENCE,
         )
 
         output_file = str(Path(save_path) / f"{chunk_id}_output.mp4")

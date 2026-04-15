@@ -501,6 +501,9 @@ class WanVideoPipeline(BasePipeline):
         long_term_memory_start_step: Optional[int] = 30,
         long_term_memory_num_clips: Optional[int] = 4,
         long_term_memory_ref_indices: Optional[list] = None,
+        # Autoregressive rollout
+        num_ar_steps: Optional[int] = 50,
+        attention_sink_inference: Optional[bool] = False,
         # progress_bar
         progress_bar_cmd=tqdm,
     ):
@@ -574,7 +577,6 @@ class WanVideoPipeline(BasePipeline):
         condition_num = 8
         generated_num = 8
         stage = num_inference_steps // generated_num
-        action_cfg = False
 
         latent_height = inputs_shared["height"] // self.vae.upsampling_factor
         latent_width = inputs_shared["width"] // self.vae.upsampling_factor
@@ -583,9 +585,6 @@ class WanVideoPipeline(BasePipeline):
         self.scheduler.set_timesteps(num_inference_steps, denoising_strength=denoising_strength, shift=sigma_shift)
         sigmas = self.scheduler.sigmas.to(self.device, dtype=torch.bfloat16)
         timesteps = self.scheduler.timesteps.to(self.device, dtype=torch.bfloat16)
-
-        print(f"sigmas: {sigmas}")
-        print(f"timesteps: {timesteps}")
 
         sigmas = torch.cat([sigmas, torch.zeros(condition_num, device=timesteps.device).to(torch.bfloat16)])
         sigmas = torch.flip(sigmas, dims=[0])
@@ -598,8 +597,7 @@ class WanVideoPipeline(BasePipeline):
         first_sigma = all_sigmas[0][None, None, :, None, None]
         
         shape = (1, self.vae.model.z_dim, condition_num + generated_num, height // self.vae.upsampling_factor, width // self.vae.upsampling_factor)
-        
-        num_ar_steps = 50
+
         full_noise_shape = (1, self.vae.model.z_dim, condition_num + generated_num + num_ar_steps, height // self.vae.upsampling_factor, width // self.vae.upsampling_factor)
         full_ar_noise = self.generate_noise(full_noise_shape, seed=seed, rand_device=rand_device)
         noise = full_ar_noise[:, :, :condition_num + generated_num, :, :]
@@ -614,7 +612,6 @@ class WanVideoPipeline(BasePipeline):
         memory_pool_intrinsics = all_intrinsics[:, :condition_num*4]
         memory_pool_latents = clean_latents_full[:, :, :condition_num, :, :]
 
-        attention_sink_inference = False
         if attention_sink_inference:
             attention_sink_inf_num = 1
             attention_sink_latent = clean_latents_full[:, :, :attention_sink_inf_num, :, :].to(progressive_latents.device)
@@ -657,7 +654,6 @@ class WanVideoPipeline(BasePipeline):
                 inputs_shared["intrinsics"][:, :4 * attention_sink_inf_num, :] = attention_sink_intrinsics.clone()
                 inputs_shared["extrinsics"][:, :4 * attention_sink_inf_num, :, :] = attention_sink_extrinsics.clone()
             
-            # 8 ar frames -> defined / 15 ar frames go 
             if i < long_term_memory_start_step:
                 long_term_condition = False
             else:
@@ -717,17 +713,8 @@ class WanVideoPipeline(BasePipeline):
                     if cfg_merge:
                         noise_pred_posi, noise_pred_nega = noise_pred_posi.chunk(2, dim=0)
                     else:
-                        if action_cfg:
-                            inputs_shared["extrinsics"] = None
-                            inputs_shared["intrinsics"] = None
-                            noise_pred_nega = self.model_fn(**models, **inputs_shared, **inputs_nega, timestep=timestep)
-                            noise_pred_posi_noaction = self.model_fn(**models, **inputs_shared, **inputs_posi, timestep=timestep)
-                        else:
-                            noise_pred_nega = self.model_fn(**models, **inputs_shared, **inputs_nega, timestep=timestep)
-                    if action_cfg:
-                        noise_pred = noise_pred_nega + cfg_scale / 2 * (noise_pred_posi - noise_pred_posi_noaction) + cfg_scale * (noise_pred_posi_noaction - noise_pred_nega)
-                    else:
-                        noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
+                        noise_pred_nega = self.model_fn(**models, **inputs_shared, **inputs_nega, timestep=timestep)
+                    noise_pred = noise_pred_nega + cfg_scale * (noise_pred_posi - noise_pred_nega)
                 else:
                     noise_pred = noise_pred_posi
 
