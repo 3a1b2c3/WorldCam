@@ -51,7 +51,7 @@ Inference settings can be adjusted in the configuration block at the top of `inf
 
 ## Download Dataset
 
-We release gameplay recordings from two open-source FPS games for research use:
+We release gameplay recordings from two open-source games for research use:
 
 | Game | License | Folder |
 | --- | --- | --- |
