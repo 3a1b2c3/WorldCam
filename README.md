@@ -45,6 +45,8 @@ The base Wan2.1-T2V-1.3B weights (text encoder, VAE, base DiT, tokenizer) are pu
 python inference.py
 ```
 
+Inference settings can be adjusted in the configuration block at the top of `inference.py`.
+
 ---
 
 ## Download Dataset
