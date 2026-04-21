@@ -71,8 +71,11 @@ def _build_pipeline():
     pipe.prompter.fetch_tokenizer(tok_cfg.path)
 
     from diffsynth.models import load_state_dict
-    print(f"[vbench] Loading fine-tuned weights: {TRAINED_MODEL_PATH}")
-    pipe.dit.load_state_dict(load_state_dict(TRAINED_MODEL_PATH, device="cpu"), strict=True)
+    if Path(TRAINED_MODEL_PATH).exists():
+        print(f"[vbench] Loading fine-tuned weights: {TRAINED_MODEL_PATH}")
+        pipe.dit.load_state_dict(load_state_dict(TRAINED_MODEL_PATH, device="cpu"), strict=True)
+    else:
+        print(f"[vbench] Fine-tuned weights not found ({TRAINED_MODEL_PATH}), using base model.")
 
     pipe.text_encoder.to(pipe.device, dtype=pipe.torch_dtype)
     pipe.vae.to(pipe.device, dtype=pipe.torch_dtype)

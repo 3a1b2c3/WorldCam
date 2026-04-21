@@ -196,12 +196,13 @@ class ModelConfig:
                 self.local_model_path = "./models"
             if not skip_download:
                 downloaded_files = glob.glob(self.origin_file_pattern, root_dir=os.path.join(self.local_model_path, self.model_id))
+                _all_present = allow_file_pattern is None or len(downloaded_files) > 0
                 snapshot_download(
                     self.model_id,
                     local_dir=os.path.join(self.local_model_path, self.model_id),
                     allow_file_pattern=allow_file_pattern,
                     ignore_file_pattern=downloaded_files,
-                    local_files_only=False
+                    local_files_only=_all_present,
                 )
             
             # Let rank 1, 2, ... wait for rank 0
